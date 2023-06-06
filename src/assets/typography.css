@@ -1,0 +1,13 @@
+/*@font-face {
+    font-family: 'Helvetica';
+    src: url('path/to/helvetica.ttf') format('truetype');
+  }
+*/
+body {
+  font-family: 'Helvetica', sans-serif;
+  background-image: linear-gradient(16deg, rgba(190,231,246,1) 2%, rgba(154,206,225,1) 34%, rgba(141,211,223,1) 100%);
+  height:100%;
+  width:100%;
+  display:inline-block;
+  position:absolute;
+}
