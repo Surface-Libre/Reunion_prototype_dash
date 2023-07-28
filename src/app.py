@@ -10,9 +10,6 @@ import dash_bootstrap_components as dbc
 from dash import html
 
 
-dss_file = glob.glob(os.getcwd() + '/src/data/*/*.dss', recursive=True)[0]
-dss_file_hist = "C:\\Users\\33751\\Downloads\\Modele_Hydrologie_Dashboard\\Modele_Hydrologie_Dashboard\\HydroSJ_Obs.dss"
-
 assets_folder_path = os.path.join(os.getcwd(), 'src', 'assets')
 
 app = dash.Dash(__name__,
@@ -32,3 +29,6 @@ app.layout = html.Div(children=[
 if __name__ == "__main__":
     # app.run_server(debug=True)
     app.run_server(debug=False, port=5050)
+
+
+

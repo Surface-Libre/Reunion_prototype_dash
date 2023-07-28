@@ -10,12 +10,17 @@ import dash_bootstrap_components as dbc
 import shutil
 import os
 import dash
+import subprocess
+
+
 
 from apps import navigationbar
 
 dash.register_page(__name__, path='/simrun', title="Simulation Run", description="Simulation_run", image='logo.png')
 
 folder_path = 'C:\\Users\\33751\\Downloads\\Modele_Hydrologie_Dashboard\\Modele_Hydrologie_Dashboard\\'
+
+values_timestep= {"15min": 'PT5M',"1h": 'PT1H',"3h": 'PT3H',"6h": 'PT6H'}
 
 
 def get_plans(folder_path):
@@ -50,110 +55,134 @@ def get_plans(folder_path):
             return prj_path, options_chek
 
 
-def get_date_time():
-    """
-    Get the current date and time, hindcast date and time, and forecast date and time.
-
-    Returns:
-        tuple: A tuple containing the current date, current time, hindcast date, hindcast time, forecast date, and forecast time.
-    """
-    now = datetime.now()
-    current_date = now.strftime("%m/%d/%Y")
-    current_time = now.strftime("%H:%M")
-
-    hindcast = now - timedelta(hours=24)
-    hindcast_date = hindcast.strftime("%m/%d/%Y")
-    hindcast_time = hindcast.strftime("%H:%M")
-
-    forecast = now + timedelta(hours=48)
-    forecast_date = forecast.strftime("%m/%d/%Y")
-    forecast_time = forecast.strftime("%H:%M")
-
-    return current_date, current_time, hindcast_date, hindcast_time, forecast_date, forecast_time
-
-
-controller = [
-    dbc.CardHeader("Run Simulation"),
-    dbc.CardBody(
-        [
-            dbc.Container(id='cont_run', children=[
-                dbc.Row([html.H2(children='PROJET HEC-RAS')]),
-                dbc.Row([
-                    html.Div(id='output_ras_folder',
-                             children=[' Choosen HEC-RAS project :  {}'.format(get_plans(folder_path)[0])]),
-                    html.H3('Select  HEC-RAS palns to run:'),
-                    dcc.Dropdown(id='check-plans', options=options_chek, value=[], multi=True, persistence=True)
-
-                ]),
-                dbc.Row([dcc.Tabs([
-                    dcc.Tab(label='Automatic mode', children=[
-                        html.Div([
-                            html.Button('Run simulation', id='auto_run_simulation_btn', n_clicks=0),
-                            html.Div(id='auto_simulation_output')
-                        ])
-                    ]),
-                    dcc.Tab(label='Manual mode', children=[
-                        html.Div(
-                            [
-                                html.Div(
-                                    [
-                                        html.Label("Start Date (MM/DD/YYYY):"),
-                                        dcc.Input(id="manual-mode-start-date", type="text",
-                                                  placeholder="MM/DD/YYYY", persistence=True),
-                                        html.Label("Start Time (HHMM):"),
-                                        dcc.Input(id="manual-mode-start-time", type="text",
-                                                  placeholder="HHMM", persistence=True),
-                                    ]
-                                    ,
-                                ),
-                                html.Div(
-                                    [
-                                        html.Label("End Date (MM/DD/YYYY):"),
-                                        dcc.Input(id="manual-mode-end-date", type="text",
-                                                  placeholder="MM/DD/YYYY", persistence=True),
-                                        html.Label("End Time (HHMM):"),
-                                        dcc.Input(id="manual-mode-end-time", type="text",
-                                                  placeholder="HHMM", persistence=True),
-                                    ],
-
-                                ),
-                                html.Button('Run simulation', id='man_run_simulation_btn', n_clicks=0),
-                                html.H4(html.Div(id='man_simulation_output'))
-                            ]
-                        ),
+layout = [
+    navigationbar.navbar,
+    html.Br(),
+    dbc.Container(
+        dbc.Card(
+            [
+                dbc.CardHeader("Run Simulation"),
+                dbc.CardBody(
+                    [
+                        dbc.Container(
+                            id='cont_run',
+                            children=[
+                                dbc.Row([
+                                    html.Div(
+                                        id='output_ras_folder',
+                                        children=['Projet HEC-RAS choisi: {}'.format(get_plans(folder_path)[0])],
+                                        className="col-12 mb-3"
+                                    ),
+                                    html.Div(
+                                        [
+                                            html.H6('Selectionner les plans du projet HEC-RAS à exécuter:', className='h6'),
+                                            dcc.Dropdown(
+                                                id='check-plans',
+                                                options=options_chek,
+                                                value=[],
+                                                multi=True,
+                                                persistence=True,
+                                                className="w-100"
+                                            )
+                                        ],
+                                        className="col-12"
+                                    )
+                                ]),
+                                html.Br(),
+                                dbc.Row([
+                                    dcc.Tabs([
+                                        dcc.Tab(label='Mode Automatique', children=[
+                                            html.Br(),
+                                            html.H6("Selectionner le pas du temps pour l'automatisation de simulation' :", className='h6'),
+                                            dcc.Dropdown(
+                                                id='interval-dropdown-auto',
+                                                options=[
+                                                    {'label': '15 minutes', 'value': '15min'},
+                                                    {'label': '1 heure', 'value': '1h'},
+                                                    {'label': '3 heures', 'value': '3h'},
+                                                    {'label': '6 heures', 'value': '6h'}
+                                                ],
+                                                value='15min',
+                                                persistence=True,
+                                                className="w-100"
+                                            ),
+                                            html.Br(),
+                                            html.Div([
+                                                html.Button('Run simulation', id='auto_run_simulation_btn', n_clicks=0, className="btn btn-primary"),
+                                                html.Br(),
+                                                html.H5(html.Div(id='auto_simulation_output'), className='h5')
+                                            ])
+                                        ]),
+                                        dcc.Tab(label='Mode Rejeu (Manuel)', children=[
+                                            html.Div([
+                                                html.Div([
+                                                    html.Label("Nombre de jours"),
+                                                    dcc.Input(
+                                                        id="nb-jour-input",
+                                                        type="text",
+                                                        placeholder="Nombre de jours",
+                                                        persistence=True,
+                                                        className="form-control"
+                                                    )
+                                                ]),
+                                                html.Br(),
+                                                html.Div([
+                                                    html.Label("t0: date"),
+                                                    dcc.DatePickerSingle(
+                                                        id='date-picker',
+                                                        className='form-control my-datepicke',
+                                                        initial_visible_month=datetime.today(),
+                                                        date=datetime.today()
+                                                    )
+                                                ]),
+                                                html.Br(),
+                                                html.Div([
+                                                    html.Label("Heure: (Heure Locale)"),
+                                                    dcc.Dropdown(
+                                                        id='time-dropdown',
+                                                        options=[{'label': f'{i:02d}:{j:02d}', 'value': f'{i:02d}:{j:02d}'}
+                                                                 for i in range(1, 25) for j in range(0, 60, 15)],
+                                                        value='01:00',
+                                                        className="w-100"
+                                                    )
+                                                ])
+                                            ]),
+                                            html.Br(),
+                                            html.Button('Run simulation', id='man_run_simulation_btn', n_clicks=0, className="btn btn-primary"),
+                                            html.Br(),
+                                            html.H6(html.Div(id='man_simulation_output'), className='h6')
+                                        ])
+                                    ])
+                                ])
+                            ],
+                            className="container"
+                        )
                     ],
-
-                    )])
-
-                ])
-                ])
-        ]
+                    className="card-body"
+                )
+            ],
+            color="secondary",
+            outline=True,
+            className="card",
+            style={
+                "width": "70%",
+                "margin": "auto",
+                "marginTop": "10%"
+            }
+        )
     )
 ]
 
-layout = [navigationbar.navbar,
-          html.Br(),
-          dbc.Card(
-              controller,
-              color="secondary",
-              outline=True,
-              style={
-                  "width": "50%",
-                  "left": "25%",
-                  "top": "10%",
-                  "position": "absolute",
-                  "align": "center"
-              }
-          )
-]
 
 
 @dash.callback(
     [Output('auto_simulation_output', 'children')],
     [Input('auto_run_simulation_btn', 'n_clicks'),
-     Input('check-plans', 'value')]
+     Input('check-plans', 'value'),
+     Input('interval-dropdown-auto','value')],
+    prevent_initial_call=True
 )
-def auto_run_button_click(n_clicks, values):
+def auto_run_button_click(n_clicks, values_plans,timestep):
     """
     Callback function to handle the click event of the auto run simulation button.
 
@@ -165,15 +194,75 @@ def auto_run_button_click(n_clicks, values):
         list: A list containing the output message.
     """
     if n_clicks > 0:
+
+        with open('selected_interval.txt', 'w') as file:
+            pass
+
+
+        with open('plans_hecras.txt', 'w') as file:
+            for value in values_plans:
+                file.write(f"{value}\n")
+
+        
+        interval = values_timestep[timestep]
+        command = "{"+f"""$taskName = 'auto_simulation'; $task = Get-ScheduledTask -TaskName $taskName; $trigger = $task.Triggers[0]; $trigger.Repetition.Interval = '{interval}'; $trigger.StartBoundary = (Get-Date).AddMinutes(0).ToString(\'yyyy-MM-ddTHH:mm:ss\'); Set-ScheduledTask -TaskName $taskName -Trigger $trigger -Verbose"""+"}"
+
+        subprocess.run(['powershell.exe', '-Command', 'Start-Process', 'powershell.exe', '-ArgumentList', f'{command}', '-Verb', 'RunAs', '-WindowStyle Hidden'])
+        return [' La simulation a été exécutée avec succès.']
+    else:
+        return [""]
+
+
+@dash.callback(
+    [Output('man_simulation_output', 'children')],
+    [Input('man_run_simulation_btn', 'n_clicks'),
+     Input('nb-jour-input', 'value'),
+     Input('date-picker', 'date'),
+     Input('time-dropdown', 'value'),
+     Input('check-plans', 'value')],
+    prevent_initial_call=True
+)
+def man_run_button_click(n_clicks, nb_jour, date_picked, time_picked, values):
+    """
+    Callback function to handle the click event of the manual run simulation button.
+
+    Args:
+        n_clicks (int): The number of times the button has been clicked.
+        nb_jour (str): The number of days entered by the user.
+        date_picked (str): The t0 date entered by the user.
+        time_pciked (str): The t0 time entered by the user.
+        values (list): The selected values of plans from the check-plans dropdown.
+
+    Returns:
+        list: A list containing the output message.
+    """
+
+    dt_string = f'{date_picked} {time_picked}'
+
+    now = datetime.strptime(dt_string,"%Y-%m-%d %H:%M")
+
+    current_date = now.strftime("%m/%d/%Y")
+    current_time = now.strftime("%H:%M")
+
+    hindcast = now - timedelta(hours=24*int(nb_jour))
+    hindcast_date = hindcast.strftime("%m/%d/%Y")
+    hindcast_time = hindcast.strftime("%H:%M")
+
+    forecast = now + timedelta(hours=48)
+    forecast_date = forecast.strftime("%m/%d/%Y")
+    forecast_time = forecast.strftime("%H:%M")
+
+
+    if n_clicks > 0:
         print(values)
+        print("Simulation Date=" + hindcast_date + ',' + hindcast_time.replace(':', '') + ',' + forecast_date + ',' + forecast_time.replace(':', '') + "\n")
         import win32com.client
-        print(get_date_time())
+
         for plan in values:
             import pythoncom
             # Call CoInitialize to initialize the COM library
             pythoncom.CoInitialize()
-            print(plan)
-            print(prj_path)
+
             hec = win32com.client.Dispatch("RAS631.HECRASController")
             hec.Project_Open(prj_path)
 
@@ -184,78 +273,8 @@ def auto_run_button_click(n_clicks, values):
             with open(strPlanfile, 'r') as input_file, open(strNewPlanfile, 'w') as output_file:
                 for line in input_file:
                     if "Simulation Date=" in line:
-                        output_file.write(
-                            "Simulation Date=" + get_date_time()[2] + ',' + get_date_time()[3].replace(':', '') + ',' +
-                            get_date_time()[4] + ',' + get_date_time()[5].replace(':', '') + "\n")
-                    else:
-                        output_file.write(line)
-
-            shutil.copy(strNewPlanfile, strPlanfile)
-            os.remove(strNewPlanfile)
-
-            with open(strPlanfile, 'r') as f:
-                contents = f.read()
-                print(contents)
-
-            print('choosen plan :' + plan)
-            hec.Compute_HideComputationWindow()
-            NMsg, TabMsg, block = None, None, True
-            v1, NMsg, TabMsg, v2 = hec.Compute_CurrentPlan(NMsg, TabMsg, block)
-
-            hec.QuitRas()
-        return ['Function executed successfully.']
-    else:
-        return ['Function did not be executed successfully.']
-
-
-@dash.callback(
-    [Output('man_simulation_output', 'children')],
-    [Input('man_run_simulation_btn', 'n_clicks'),
-     Input('manual-mode-start-date', 'value'),
-     Input('manual-mode-start-time', 'value'),
-     Input('manual-mode-end-date', 'value'),
-     Input('manual-mode-end-time', 'value'),
-     Input('check-plans', 'value')]
-)
-def man_run_button_click(n_clicks, start_date, start_time, end_date, end_time, values):
-    """
-    Callback function to handle the click event of the manual run simulation button.
-
-    Args:
-        n_clicks (int): The number of times the button has been clicked.
-        start_date (str): The start date entered by the user.
-        start_time (str): The start time entered by the user.
-        end_date (str): The end date entered by the user.
-        end_time (str): The end time entered by the user.
-        values (list): The selected values from the check-plans dropdown.
-
-    Returns:
-        list: A list containing the output message.
-    """
-    if n_clicks > 0:
-        print(values)
-        print("Simulation Date=" + start_date + ',' + start_time + ',' + end_date + ',' + end_time + "\n")
-        import win32com.client
-
-        for plan in values:
-            import pythoncom
-            # Call CoInitialize to initialize the COM library
-            pythoncom.Coinitialize()
-
-            
-
-            hec = win32com.client.Dispatch("RAS501.HECRASController")
-            hec.Project_Open(prj_path)
-
-            hec.Plan_SetCurrent(plan)
-            strPlanfile = hec.CurrentPlanFile()
-            strNewPlanfile = strPlanfile[:strPlanfile.index(".") + 1] + 'temp' + strPlanfile[strPlanfile.index(".") + 1:]
-
-            with open(strPlanfile, 'r') as input_file, open(strNewPlanfile, 'w') as output_file:
-                for line in input_file:
-                    if "Simulation Date=" in line:
-                        output_file.write("Simulation Date=" + start_date + ',' + start_time + ',' + end_date + ',' +
-                                          end_time + "\n")
+                        output_file.write("Simulation Date=" + hindcast_date + ',' + hindcast_time.replace(':', '') + ',' + 
+                                          forecast_date + ',' + forecast_time.replace(':', '') + "\n")
                     else:
                         output_file.write(line)
 
@@ -272,7 +291,7 @@ def man_run_button_click(n_clicks, start_date, start_time, end_date, end_time, v
             v1, NMsg, TabMsg, v2 = hec.Compute_CurrentPlan(NMsg, TabMsg, block)
 
             hec.QuitRas()
-        return ['Function executed successfully.']
+        return ['La simulation a été exécutée avec succès.']
     else:
         return ['']
 

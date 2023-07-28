@@ -1,0 +1,13 @@
+# Configuration File for Dahsboard Prototype
+
+# Path to the HEC-RAS project folder (For example the folder of StJean sector)
+HEC RAS PROJECT FOLDER=C:\Users\33751\Downloads\Modele_Hydrologie_Dashboard\Modele_Hydrologie_Dashboard
+
+# Path to the DSS file for simulation data ( It must ends with .dss extension)
+DSS FILE SIMULATION=C:\Users\33751\Desktop\HydroSJ_Dash.dss
+
+# Path to the DSS file for observation data (It must ends with .dss extension)
+DSS FILE OBSERVATION DATA=C:\Users\33751\Desktop\HydroSJ_Obs.dss
+
+# Path to the DSS file for rainfall  data (Pluies de bassins) (It must ends with .dss extension)
+DSS FILE RAINFALL DATA=C:\Users\33751\Desktop\antilope_2_dss\pluies_bassins\fakir_pbv_sj.dss
